@@ -9,7 +9,10 @@ const workflowRoutes = require('./routes/workflows');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-vercel-protection-bypass'],
+}));
 app.use(express.json());
 
 // API docs
@@ -24,7 +27,11 @@ app.use('/workflows', workflowRoutes);
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
+  });
+}
+
+module.exports = app;

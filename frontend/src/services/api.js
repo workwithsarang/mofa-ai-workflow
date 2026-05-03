@@ -9,6 +9,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const bypass = import.meta.env.VITE_BYPASS_SECRET;
+  if (bypass) {
+    config.headers['x-vercel-protection-bypass'] = bypass;
+  }
   return config;
 });
 
