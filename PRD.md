@@ -1,36 +1,38 @@
-# Product Requirements Document (PRD)
-## Mofa-AI — Agent + Workflow Management System
+# PRD — Agent + Workflow Management System
+### Mofa-AI Open-Source Assignment
 
 ---
 
-| Field         | Detail                                          |
-|---------------|-------------------------------------------------|
-| **Project**   | Agent + Workflow Management System              |
-| **Author**    | Sarang — github.com/workwithsarang             |
-| **Org**       | Mofa-AI                                         |
-| **Version**   | 1.0.0                                           |
-| **Date**      | May 2026                                        |
-| **Status**    | Completed & Deployed                            |
-| **Repo**      | github.com/workwithsarang/mofa-ai-workflow      |
+| | |
+|--|--|
+| **Project** | Agent + Workflow Management System |
+| **Author** | Sarang · github.com/workwithsarang |
+| **Organisation** | Mofa-AI |
+| **Version** | 1.0 |
+| **Date** | May 2026 |
+| **Status** | Complete |
+| **Repo** | github.com/workwithsarang/mofa-ai-workflow |
 
 ---
 
-## 1. Executive Summary
+## 1. Overview
 
-The **Agent + Workflow Management System** is a full-stack web application that lets users define reusable text-processing units called **Agents**, chain them into **Workflows**, and execute those workflows against any input string — seeing step-by-step results in real time.
+This document covers the requirements, design decisions, and implementation details for the Agent + Workflow Management System I built for the Mofa-AI open-source assignment.
 
-The system is built for the Mofa-AI open-source organisation as a foundation for composable, extensible AI pipeline tooling.
+The core idea: users define small text-processing units called **Agents**, then chain exactly two of them into a **Workflow**. Running a workflow pipes user input through Agent A, feeds that output into Agent B, and returns a step-by-step breakdown of what happened.
 
 ---
 
-## 2. Problem Statement
+## 2. Problem I was solving
 
-Developers and data teams frequently need to apply multi-step text transformations (normalisation, counting, reversing, trimming) in a predictable, repeatable way. Without a management layer:
+Text transformation pipelines — things like normalising input, counting words, reversing strings — are usually hardcoded and scattered across projects. There's no standard way to:
 
-- Transformations are hard-coded and not reusable.
-- There is no visibility into what each step produced.
-- Adding a new transformation type requires touching scattered code.
-- Multi-user environments have no isolation or ownership model.
+- Define a reusable processing unit
+- Compose two units into a pipeline
+- See exactly what each step produced
+- Do all of this per-user without data leaking between accounts
+
+This system gives that a proper home.
 
 ---
 
@@ -38,348 +40,260 @@ Developers and data teams frequently need to apply multi-step text transformatio
 
 | # | Goal |
 |---|------|
-| G1 | Allow any user to register, log in, and manage their own agents and workflows independently |
-| G2 | Provide a no-code interface to create, edit, and delete agents with configurable processing types |
-| G3 | Enable chaining of exactly 2 agents into a workflow where Agent A output feeds Agent B |
-| G4 | Display step-by-step execution output clearly after running a workflow |
-| G5 | Expose every feature via a documented REST API with Swagger UI |
-| G6 | Deploy to public cloud so evaluators and users can access it without local setup |
+| G1 | Each user manages their own agents and workflows — complete data isolation |
+| G2 | Creating and editing agents requires no code — just a form |
+| G3 | Workflows chain Agent A → Agent B where A's output becomes B's input |
+| G4 | Running a workflow shows step-by-step output, not just the final result |
+| G5 | Every feature is accessible via a REST API documented in Swagger |
+| G6 | The whole thing is deployed and reachable without any local setup |
 
 ---
 
-## 4. Non-Goals (Out of Scope for v1.0)
+## 4. What I didn't build (out of scope)
 
-- Chains longer than 2 agents
-- Real-time/streaming execution
-- Drag-and-drop workflow builder
-- Role-based access control (admin vs user)
-- Agent marketplace / sharing between users
-- Billing or usage metering
-- Mobile-native app
+- Chains longer than 2 agents (could be a future iteration)
+- Real-time streaming of execution
+- Sharing agents or workflows between users
+- Admin roles or permissions management
+- Drag-and-drop workflow canvas
+- Usage limits or billing
 
 ---
 
-## 5. Users & Personas
+## 5. Who uses this
 
-### Persona A — Developer / Evaluator
-- Wants to review the API, test endpoints via Swagger, and verify ownership rules.
-- Needs: clean Swagger docs, predictable HTTP status codes, example curl commands.
+**Developer / Evaluator** — wants to poke the API, check Swagger, verify that auth and ownership rules work correctly. Needs: predictable HTTP codes, good docs, curl examples.
 
-### Persona B — End User / No-Code Builder
-- Wants to create agents and wire them into pipelines through a simple UI.
-- Needs: intuitive forms, clear status badges, step-by-step run output.
+**End user** — wants to build agents and wire them into pipelines through the UI without touching any API directly. Needs: clean forms, status indicators, easy run + results view.
 
-### Persona C — Open-Source Contributor
-- Wants to clone the repo, understand the architecture, and add a new agent type.
-- Needs: clean monorepo structure, clear code patterns, `.env.example` for quick onboarding.
+**Open-source contributor** — wants to clone, understand the structure quickly, and maybe add a new agent type. Needs: a clear pattern to follow, `.env.example` so they're not guessing env vars.
 
 ---
 
 ## 6. Feature Requirements
 
-### 6.1 Authentication
+### Authentication
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| F1.1 | User can register with email + password | Must Have |
-| F1.2 | Password hashed with bcryptjs (salt rounds ≥ 10) | Must Have |
-| F1.3 | User can log in and receive a signed JWT (7-day expiry) | Must Have |
-| F1.4 | All `/agents` and `/workflows` endpoints require `Authorization: Bearer <token>` | Must Have |
-| F1.5 | Missing token returns **401**; invalid/expired token returns **403** | Must Have |
-| F1.6 | JWT stored in `localStorage`; Axios interceptor attaches it to every request | Must Have |
-| F1.7 | Logout clears token and redirects to `/login` | Must Have |
+| F1.1 | Register with email + password | Must |
+| F1.2 | Passwords hashed with bcryptjs, salt rounds = 10 | Must |
+| F1.3 | Login returns a signed JWT (7-day expiry) | Must |
+| F1.4 | Protected routes require `Authorization: Bearer <token>` | Must |
+| F1.5 | No token → 401 · Bad/expired token → 403 | Must |
+| F1.6 | JWT stored in localStorage; Axios interceptor auto-attaches it | Must |
+| F1.7 | Logout clears token, redirects to login | Must |
 
-### 6.2 Agent Management
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| F2.1 | User can create an agent with: `name`, `type`, `status`, optional `inputSchema`, optional `processingLogic` | Must Have |
-| F2.2 | Agent types supported: `UPPERCASE`, `WORD_COUNT`, `REVERSE`, `TRIM` | Must Have |
-| F2.3 | Agent status: `ACTIVE` or `INACTIVE` (default `ACTIVE`) | Must Have |
-| F2.4 | User can list all their own agents | Must Have |
-| F2.5 | User can view, update, and delete a single agent | Must Have |
-| F2.6 | Ownership enforced — another user's agent returns **404** | Must Have |
-| F2.7 | Status badge displayed in UI (green = ACTIVE, grey = INACTIVE) | Must Have |
-
-### 6.3 Agent Processing Logic
+### Agent Management
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| F3.1 | `UPPERCASE` — converts input to uppercase | Must Have |
-| F3.2 | `WORD_COUNT` — returns the number of words as a string | Must Have |
-| F3.3 | `REVERSE` — reverses the characters of the input string | Should Have |
-| F3.4 | `TRIM` — strips leading and trailing whitespace | Should Have |
-| F3.5 | Processing logic centralised in a single `runAgent(agent, input)` switch-map helper — new types require adding one block | Must Have |
+| F2.1 | Create agents with: name, type, status, optional inputSchema, optional processingLogic | Must |
+| F2.2 | Supported types: UPPERCASE, WORD_COUNT, REVERSE, TRIM | Must |
+| F2.3 | Status is ACTIVE or INACTIVE (default ACTIVE) | Must |
+| F2.4 | List, view, update, delete — all scoped to the logged-in user | Must |
+| F2.5 | Accessing another user's agent returns 404 (not 403 — don't leak existence) | Must |
+| F2.6 | Status badge in UI: green for active, grey for inactive | Must |
 
-### 6.4 Workflow Management
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| F4.1 | User can create a workflow with a name and exactly 2 agent IDs (`agentIds: [A, B]`) | Must Have |
-| F4.2 | Both agents must belong to the creating user | Must Have |
-| F4.3 | User can list all their workflows | Must Have |
-| F4.4 | Each workflow row in the UI shows: name, Agent A → Agent B labels, Run button | Must Have |
-
-### 6.5 Workflow Execution
+### Agent Processing
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| F5.1 | `POST /workflows/:id/run` accepts `{ input: string }` | Must Have |
-| F5.2 | Step 1: `runAgent(agentA, input)` → `step1Output` | Must Have |
-| F5.3 | Step 2: `runAgent(agentB, step1Output)` → `step2Output` | Must Have |
-| F5.4 | Response includes `steps[]` array (index, agentId, agentName, output) and `finalOutput` | Must Have |
-| F5.5 | UI displays each step in a labelled card; final output in a highlighted box | Must Have |
+| F3.1 | UPPERCASE — converts input to uppercase | Must |
+| F3.2 | WORD_COUNT — returns word count as string | Must |
+| F3.3 | REVERSE — reverses all characters | Should |
+| F3.4 | TRIM — strips leading/trailing whitespace | Should |
+| F3.5 | All processing logic in one `runAgent()` switch-map — adding a new type is one code block | Must |
 
-### 6.6 API Documentation
+### Workflow Management
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| F6.1 | Swagger UI mounted at `/api-docs` using `swagger-ui-express` | Must Have |
-| F6.2 | Every endpoint documented with request body schema, response schema, auth requirement | Must Have |
-| F6.3 | Raw OpenAPI JSON available at `/api-docs.json` | Should Have |
+| F4.1 | Create workflow with a name and exactly 2 agent IDs | Must |
+| F4.2 | Both agents must belong to the creating user | Must |
+| F4.3 | List view shows workflow name, Agent A → Agent B labels, and Run button | Must |
+
+### Workflow Execution
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| F5.1 | POST /workflows/:id/run accepts `{ input: string }` | Must |
+| F5.2 | Step 1: run Agent A on input | Must |
+| F5.3 | Step 2: run Agent B on Step 1's output | Must |
+| F5.4 | Response: `{ steps: [...], finalOutput: "..." }` | Must |
+| F5.5 | UI shows each step in a card + final output highlighted separately | Must |
+
+### API Docs
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| F6.1 | Swagger UI at `/api-docs` | Must |
+| F6.2 | Every endpoint has request schema, response schema, auth requirement documented | Must |
 
 ---
 
-## 7. Technical Architecture
+## 7. Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                        CLIENT                           │
-│   React 18 + Vite   │   React Router v6   │   Axios    │
-│                                                         │
-│  /login  /register  /agents  /agents/new               │
-│  /agents/:id/edit   /workflows  /workflows/new          │
-│  /workflows/:id/run                                     │
-└─────────────────────────┬───────────────────────────────┘
-                          │ HTTPS  (Bearer JWT)
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                       SERVER                            │
-│              Node.js 18 + Express 4                     │
-│                                                         │
-│  /auth/*          authMiddleware (JWT verify)           │
-│  /agents/*   ──►  agentController   ──►  runAgent()     │
-│  /workflows/*     workflowController                    │
-│  /api-docs        Swagger UI                            │
-│                                                         │
-│              Prisma ORM (query builder)                 │
-└─────────────────────────┬───────────────────────────────┘
-                          │ TCP
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                     DATABASE                            │
-│              PostgreSQL 16 (Render / Supabase)          │
-│                                                         │
-│   User ──< Agent                                        │
-│   User ──< Workflow  (agentIds: String[])               │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                     Browser (React)                  │
+│  Vite · React Router v6 · Axios + JWT interceptor    │
+│                                                      │
+│  /login  /register  /agents  /agents/new             │
+│  /agents/:id/edit  /workflows  /workflows/new        │
+│  /workflows/:id/run                                  │
+└──────────────────────┬───────────────────────────────┘
+                       │ HTTPS · Bearer JWT
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│               Express API (Node.js 18)               │
+│                                                      │
+│  /auth/*      → authController                       │
+│  /agents/*    → authMiddleware → agentController     │
+│  /workflows/* → authMiddleware → workflowController  │
+│                           ↓                          │
+│                      runAgent()                      │
+│  /api-docs    → Swagger UI                           │
+│                                                      │
+│              Prisma ORM                              │
+└──────────────────────┬───────────────────────────────┘
+                       │ TCP
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│           PostgreSQL 16 (Render managed DB)          │
+│                                                      │
+│  User  ──<  Agent                                    │
+│  User  ──<  Workflow  (agentIds String[])            │
+└──────────────────────────────────────────────────────┘
 ```
 
-### Data Models
+### Database models
 
-**User**
-```
-id         String   (cuid, PK)
-email      String   (unique)
-password   String   (bcrypt hash)
-createdAt  DateTime
-updatedAt  DateTime
-```
+**User** — `id, email (unique), password (hashed), createdAt, updatedAt`
 
-**Agent**
-```
-id               String      (cuid, PK)
-userId           String      (FK → User)
-name             String
-type             AgentType   (UPPERCASE | WORD_COUNT | REVERSE | TRIM)
-inputSchema      String?
-processingLogic  String?
-status           AgentStatus (ACTIVE | INACTIVE)
-createdAt        DateTime
-updatedAt        DateTime
-```
+**Agent** — `id, userId (FK), name, type (enum), inputSchema?, processingLogic?, status (enum), createdAt, updatedAt`
 
-**Workflow**
-```
-id        String    (cuid, PK)
-userId    String    (FK → User)
-name      String
-agentIds  String[]  (ordered: [agentA, agentB])
-createdAt DateTime
-updatedAt DateTime
-```
+**Workflow** — `id, userId (FK), name, agentIds (String[]), createdAt, updatedAt`
 
 ---
 
-## 8. API Surface
+## 8. API reference
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/register` | No | Register new user |
-| POST | `/auth/login` | No | Login, receive JWT |
-| GET | `/agents` | JWT | List user's agents |
+| POST | `/auth/register` | No | Register |
+| POST | `/auth/login` | No | Login → JWT |
+| GET | `/agents` | JWT | List agents |
 | POST | `/agents` | JWT | Create agent |
-| GET | `/agents/:id` | JWT | Get single agent |
+| GET | `/agents/:id` | JWT | Get agent |
 | PUT | `/agents/:id` | JWT | Update agent |
 | DELETE | `/agents/:id` | JWT | Delete agent |
-| GET | `/workflows` | JWT | List user's workflows |
+| GET | `/workflows` | JWT | List workflows |
 | POST | `/workflows` | JWT | Create workflow |
-| GET | `/workflows/:id` | JWT | Get single workflow |
-| POST | `/workflows/:id/run` | JWT | Execute workflow |
+| GET | `/workflows/:id` | JWT | Get workflow |
+| POST | `/workflows/:id/run` | JWT | Run workflow |
 | GET | `/api-docs` | No | Swagger UI |
 | GET | `/health` | No | Health check |
 
-### HTTP Status Codes
+**HTTP codes used:**
 
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Validation error (bad input) |
-| 401 | No token provided |
-| 403 | Invalid or expired token |
-| 404 | Resource not found / not owned by user |
-| 409 | Conflict (e.g. duplicate email) |
+- `200` success · `201` created · `400` bad input · `401` no token · `403` bad token · `404` not found or not yours · `409` duplicate
 
 ---
 
-## 9. Security Requirements
+## 9. Security
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Passwords never stored in plain text | bcryptjs, 10 salt rounds |
-| Passwords never returned in any API response | Prisma select fields exclude `password` |
-| JWT signed with a strong secret | `JWT_SECRET` env var, HS256, 7d expiry |
-| Ownership isolation | Every DB query filters by `userId: req.userId` |
-| No resource existence leaking | Wrong-owner lookups return 404, not 403 |
-| Secrets never committed | `.env` in `.gitignore`; `.env.example` provided |
-| CORS enabled | `cors()` middleware on all routes |
-
----
-
-## 10. Frontend Pages
-
-| Route | Page | Description |
-|-------|------|-------------|
-| `/register` | Register | Email + password form, redirects to login on success |
-| `/login` | Login | Stores JWT in localStorage, redirects to `/agents` |
-| `/agents` | Agents List | Table with name, type badge, status badge, Edit/Delete |
-| `/agents/new` | Agent Form | Create new agent |
-| `/agents/:id/edit` | Agent Form | Pre-filled edit form |
-| `/workflows` | Workflows List | Table with Agent A → B chain, Run button |
-| `/workflows/new` | Workflow Builder | Name input + 2 agent dropdowns (active agents only) |
-| `/workflows/:id/run` | Workflow Run | Textarea input → step cards → final output box |
-
-All routes except `/login` and `/register` are wrapped in `<ProtectedRoute>` — unauthenticated users are redirected to `/login`.
+| What | How |
+|------|-----|
+| Password storage | bcryptjs, salt rounds 10 |
+| Password never returned | Prisma queries never select the `password` field |
+| JWT signing | HS256, `JWT_SECRET` from env, 7-day expiry |
+| Ownership isolation | Every query filters by `userId: req.userId` |
+| Existence leaking | Wrong-owner lookups return 404, not 403 |
+| Secrets in git | `.env` is gitignored; `.env.example` ships instead |
 
 ---
 
-## 11. Deployment Architecture
+## 10. Frontend pages
+
+| Route | Page |
+|-------|------|
+| `/register` | Email + password form. Redirects to login on success. |
+| `/login` | Saves JWT to localStorage on success, sends to `/agents`. |
+| `/agents` | Table — name, type, status badge, Edit + Delete per row. |
+| `/agents/new` | Create form. |
+| `/agents/:id/edit` | Pre-filled edit form. |
+| `/workflows` | Table — name, Agent A → B, Run button per row. |
+| `/workflows/new` | Name input + 2 agent dropdowns (active agents only). |
+| `/workflows/:id/run` | Textarea input → step cards → final output box. |
+
+All routes except `/login` and `/register` redirect to login if no token is present.
+
+---
+
+## 11. Deployment
 
 ```
 GitHub (workwithsarang/mofa-ai-workflow)
-         │
-         ├──► Vercel (Frontend)
-         │     Root: /frontend
-         │     Build: npm run build
-         │     Env:   VITE_API_BASE_URL=<render-url>
-         │
-         └──► Render (Backend)
-               Root: /backend
-               Build: npm install && prisma generate && prisma migrate deploy
-               Start: node src/index.js
-               Env:   DATABASE_URL, JWT_SECRET, PORT, API_BASE_URL
-                        │
-                        └──► Render PostgreSQL (managed DB)
+        │
+        ├──► Vercel
+        │    Root dir: /frontend · Framework: Vite
+        │    Env: VITE_API_BASE_URL=<render-url>
+        │
+        └──► Render
+             Root dir: /backend
+             Build: npm install && prisma generate && prisma migrate deploy
+             Start: node src/index.js
+             Env: DATABASE_URL · JWT_SECRET · PORT=5000
+               │
+               └──► Render PostgreSQL
 ```
 
 ---
 
-## 12. Project Structure
+## 12. Folder structure
 
 ```
 mofa/
 ├── backend/
-│   ├── prisma/schema.prisma        # DB schema (User, Agent, Workflow)
-│   ├── src/
-│   │   ├── controllers/            # Business logic per resource
-│   │   ├── middleware/auth.js      # JWT verification
-│   │   ├── routes/                 # Express routers with Swagger JSDoc
-│   │   ├── helpers/runAgent.js     # Agent processing switch-map
-│   │   ├── swagger/swagger.js      # OpenAPI spec + UI setup
-│   │   └── index.js                # App entry point
-│   └── .env.example
+│   ├── prisma/schema.prisma        ← DB models
+│   └── src/
+│       ├── controllers/            ← business logic
+│       ├── middleware/auth.js      ← JWT check
+│       ├── routes/                 ← Express routers + Swagger JSDoc
+│       ├── helpers/runAgent.js     ← agent processing switch-map
+│       ├── swagger/swagger.js      ← OpenAPI setup
+│       └── index.js
 ├── frontend/
-│   ├── src/
-│   │   ├── components/             # Navbar, ProtectedRoute
-│   │   ├── pages/                  # One file per route/page
-│   │   ├── services/api.js         # Axios instance + JWT interceptor
-│   │   ├── App.jsx                 # Router + layout
-│   │   └── index.css               # Global styles
-│   └── .env.example
+│   └── src/
+│       ├── components/             ← Navbar, ProtectedRoute
+│       ├── pages/                  ← one file per route
+│       ├── services/api.js         ← Axios + JWT interceptor
+│       ├── App.jsx                 ← router + layout
+│       └── index.css
 └── README.md
 ```
 
 ---
 
-## 13. Success Metrics
+## 13. How to add a new agent type
 
-| Metric | Target |
-|--------|--------|
-| All API endpoints return correct HTTP codes | 100% |
-| Frontend build passes (`vite build`) with zero errors | ✅ Verified |
-| Agent helper unit correctness | UPPERCASE, WORD_COUNT, REVERSE, TRIM all verified |
-| Ownership isolation | Users cannot read/edit/delete/run another user's resources |
-| Zero secrets in git history | `.env` excluded, `.env.example` committed |
-| Public GitHub repo with full source | github.com/workwithsarang/mofa-ai-workflow |
-| Swagger docs accessible at `/api-docs` | All 11 endpoints documented |
+Say you want to add `TITLECASE`:
 
----
-
-## 14. Tech Stack Summary
-
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Runtime | Node.js | 18+ |
-| Web framework | Express | 4.x |
-| ORM | Prisma | 5.x |
-| Database | PostgreSQL | 16 |
-| Auth | jsonwebtoken + bcryptjs | 9.x / 2.x |
-| API docs | swagger-ui-express + swagger-jsdoc | 5.x / 6.x |
-| Frontend | React | 18 |
-| Build tool | Vite | 5.x |
-| Routing | React Router | v6 |
-| HTTP client | Axios | 1.x |
-| Backend hosting | Render | — |
-| Frontend hosting | Vercel | — |
-
----
-
-## 15. Risks & Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Render cold-start delay on free tier | High | Low | Add `/health` endpoint; note in README |
-| PostgreSQL `agentIds String[]` not supported on SQLite | Medium | Medium | PRD mandates PostgreSQL; SQLite option documented as dev-only |
-| JWT secret exposed via misconfigured deployment env | Low | High | `.env.example` ships with placeholder; `JWT_SECRET` marked required |
-| User creates workflow with agents they don't own | Low | High | Both agents ownership-verified at workflow creation time |
-
----
-
-## 16. Open-Source Contribution Guide
-
-To add a new agent type (e.g. `TITLECASE`):
-
-1. Add `TITLECASE` to the `AgentType` enum in [backend/prisma/schema.prisma](backend/prisma/schema.prisma)
+1. Add `TITLECASE` to the `AgentType` enum in `backend/prisma/schema.prisma`
 2. Run `npx prisma migrate dev --name add-titlecase`
-3. Add one entry to the `AGENT_PROCESSORS` map in [backend/src/helpers/runAgent.js](backend/src/helpers/runAgent.js):
+3. Add one entry in `backend/src/helpers/runAgent.js`:
    ```js
    TITLECASE: (input) => input.replace(/\b\w/g, c => c.toUpperCase()),
    ```
-4. Add `TITLECASE` to the `TYPES` array in [frontend/src/pages/AgentForm.jsx](frontend/src/pages/AgentForm.jsx)
+4. Add `'TITLECASE'` to the `TYPES` array in `frontend/src/pages/AgentForm.jsx`
 
-No other files need to change.
+That's it — nothing else needs changing.
 
 ---
 
-*Document prepared for Mofa-AI open-source assignment review — May 2026*
+## 14. Known trade-offs
+
+- Workflows are fixed at 2 agents for now. Extending to N agents would need a loop in `runWorkflow()` and a UI that supports variable-length chains — left for a future version.
+- `agentIds` is stored as a `String[]` on the Workflow model (PostgreSQL array). This is simple but means there's no FK constraint at the DB level — ownership is enforced in the controller instead.
+- Frontend state isn't managed with Redux/Zustand; each page fetches its own data. Fine at this scale, but would need a shared store if the app grew.
