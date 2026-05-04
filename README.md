@@ -33,9 +33,9 @@ For example: an `UPPERCASE` agent followed by a `WORD_COUNT` agent would first c
 
 | | URL |
 |--|-----|
-| Frontend | `<paste Vercel URL after deploy>` |
-| Backend API | `<paste Render URL after deploy>` |
-| Swagger Docs | `<backend-url>/api-docs` |
+| Frontend | https://mofa-ai-workflow.vercel.app |
+| Backend API | https://mofa-ai-backend.onrender.com |
+| Swagger Docs | https://mofa-ai-backend.onrender.com/api-docs |
 
 ---
 
@@ -119,14 +119,14 @@ Auth is a `Bearer` token in the `Authorization` header. Missing token → 401, b
 
 **Register**
 ```bash
-curl -X POST https://<backend-url>/auth/register \
+curl -X POST https://mofa-ai-backend.onrender.com/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"yourpassword"}'
 ```
 
 **Login and save the token**
 ```bash
-TOKEN=$(curl -s -X POST https://<backend-url>/auth/login \
+TOKEN=$(curl -s -X POST https://mofa-ai-backend.onrender.com/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"yourpassword"}' \
   | jq -r '.token')
@@ -134,7 +134,7 @@ TOKEN=$(curl -s -X POST https://<backend-url>/auth/login \
 
 **Create an agent**
 ```bash
-curl -X POST https://<backend-url>/agents \
+curl -X POST https://mofa-ai-backend.onrender.com/agents \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"My Uppercase Agent","type":"UPPERCASE"}'
@@ -142,7 +142,7 @@ curl -X POST https://<backend-url>/agents \
 
 **Create a workflow**
 ```bash
-curl -X POST https://<backend-url>/workflows \
+curl -X POST https://mofa-ai-backend.onrender.com/workflows \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Upper then Count","agentIds":["<agentAId>","<agentBId>"]}'
@@ -150,7 +150,7 @@ curl -X POST https://<backend-url>/workflows \
 
 **Run a workflow**
 ```bash
-curl -X POST https://<backend-url>/workflows/<id>/run \
+curl -X POST https://mofa-ai-backend.onrender.com/workflows/<id>/run \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"input":"hello world from sarang"}'
