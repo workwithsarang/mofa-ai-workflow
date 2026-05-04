@@ -33,7 +33,7 @@ For example: an `UPPERCASE` agent followed by a `WORD_COUNT` agent would first c
 
 | | URL |
 |--|-----|
-| Frontend | https://mofa-ai-workflow.vercel.app |
+| Frontend | https://frontend-nine-bay-65.vercel.app |
 | Backend API | https://mofa-ai-backend.onrender.com |
 | Swagger Docs | https://mofa-ai-backend.onrender.com/api-docs |
 
