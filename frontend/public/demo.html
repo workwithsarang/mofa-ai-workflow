@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mofa-AI — Live Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 820px; margin: 0 auto; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #6366f1, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .subtitle { color: #94a3b8; margin-bottom: 36px; font-size: 0.95rem; }
+
+    .run-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 36px;
+      transition: opacity 0.2s;
+    }
+    .run-btn:hover { opacity: 0.88; }
+    .run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .running .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .section {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: #252840;
+      border-bottom: 1px solid #2d3148;
+    }
+
+    .step-badge {
+      background: #6366f1;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    .section-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #c7d2fe;
+    }
+
+    .status-dot {
+      margin-left: auto;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #334155;
+      transition: background 0.3s;
+    }
+    .status-dot.ok { background: #22c55e; }
+    .status-dot.err { background: #ef4444; }
+    .status-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .section-body { padding: 18px 20px; }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .agent-card {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 14px;
+      opacity: 0.4;
+      transition: opacity 0.4s;
+    }
+    .agent-card.active { opacity: 1; }
+
+    .agent-name { font-weight: 600; font-size: 0.9rem; color: #e2e8f0; }
+    .agent-type {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1e2130;
+      color: #38bdf8;
+      border: 1px solid #2d3148;
+    }
+
+    .workflow-grid { display: flex; flex-direction: column; gap: 14px; }
+
+    .workflow-card {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 16px;
+      opacity: 0.4;
+      transition: opacity 0.4s;
+    }
+    .workflow-card.active { opacity: 1; }
+
+    .workflow-name { font-weight: 600; margin-bottom: 12px; color: #e2e8f0; }
+
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .pipe-node {
+      background: #1e2130;
+      border: 1px solid #4f46e5;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      color: #a5b4fc;
+      font-weight: 600;
+    }
+
+    .pipe-arrow { color: #475569; font-size: 1.1rem; }
+
+    .input-label { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
+
+    .input-val {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.83rem;
+      color: #94a3b8;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      margin-bottom: 10px;
+    }
+
+    .steps-container { display: flex; flex-direction: column; gap: 8px; }
+
+    .step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.4s, transform 0.4s;
+    }
+    .step-row.visible { opacity: 1; transform: translateY(0); }
+
+    .step-num {
+      min-width: 24px; height: 24px;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+
+    .step-content { flex: 1; }
+    .step-agent { font-size: 0.75rem; color: #64748b; margin-bottom: 2px; }
+    .step-output {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 0.83rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #38bdf8;
+      word-break: break-all;
+    }
+
+    .final-output {
+      margin-top: 10px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(56,189,248,0.1));
+      border: 1px solid #4f46e5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .final-output.visible { opacity: 1; }
+    .final-label { font-size: 0.75rem; color: #818cf8; font-weight: 600; }
+    .final-val {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      font-weight: 700;
+    }
+
+    .log-box {
+      background: #0a0c12;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      color: #64748b;
+      max-height: 160px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+
+    .log-ok { color: #22c55e; }
+    .log-info { color: #38bdf8; }
+    .log-err { color: #ef4444; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-num { font-size: 2rem; font-weight: 700; color: #6366f1; }
+    .stat-label { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Mofa-AI · Live Demo</h1>
+  <p class="subtitle">Registers a fresh user, creates all 4 agents, builds 3 workflows, runs them — all against the live backend.</p>
+
+  <button class="run-btn" id="runBtn" onclick="runDemo()">
+    <div class="spinner" id="spinner"></div>
+    <span id="btnText">Run Full Demo</span>
+  </button>
+
+  <!-- Auth -->
+  <div class="section">
+    <div class="section-header">
+      <span class="step-badge">STEP 1</span>
+      <span class="section-title">Register & Login</span>
+      <div class="status-dot" id="dot-auth"></div>
+    </div>
+    <div class="section-body">
+      <div class="log-box" id="log-auth">Waiting to start…</div>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="section">
+    <div class="section-header">
+      <span class="step-badge">STEP 2</span>
+      <span class="section-title">Create All 4 Agents</span>
+      <div class="status-dot" id="dot-agents"></div>
+    </div>
+    <div class="section-body">
+      <div class="agent-grid">
+        <div class="agent-card" id="card-UP">
+          <div class="agent-name">Uppercase Bot</div>
+          <div class="agent-type">UPPERCASE</div>
+        </div>
+        <div class="agent-card" id="card-WC">
+          <div class="agent-name">Word Counter</div>
+          <div class="agent-type">WORD_COUNT</div>
+        </div>
+        <div class="agent-card" id="card-RV">
+          <div class="agent-name">Text Reverser</div>
+          <div class="agent-type">REVERSE</div>
+        </div>
+        <div class="agent-card" id="card-TR">
+          <div class="agent-name">Space Trimmer</div>
+          <div class="agent-type">TRIM</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflows -->
+  <div class="section">
+    <div class="section-header">
+      <span class="step-badge">STEP 3</span>
+      <span class="section-title">Build & Run 3 Workflows</span>
+      <div class="status-dot" id="dot-wf"></div>
+    </div>
+    <div class="section-body">
+      <div class="workflow-grid">
+
+        <!-- WF1 -->
+        <div class="workflow-card" id="wf1">
+          <div class="workflow-name">Workflow 1 — Uppercase then Count</div>
+          <div class="pipeline">
+            <div class="pipe-node">Uppercase Bot</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-node">Word Counter</div>
+          </div>
+          <div class="input-label">INPUT</div>
+          <div class="input-val">"the quick brown fox jumps over the lazy dog"</div>
+          <div class="steps-container" id="steps-wf1"></div>
+          <div class="final-output" id="final-wf1">
+            <span class="final-label">FINAL OUTPUT</span>
+            <span class="final-val" id="finalval-wf1"></span>
+          </div>
+        </div>
+
+        <!-- WF2 -->
+        <div class="workflow-card" id="wf2">
+          <div class="workflow-name">Workflow 2 — Trim then Reverse</div>
+          <div class="pipeline">
+            <div class="pipe-node">Space Trimmer</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-node">Text Reverser</div>
+          </div>
+          <div class="input-label">INPUT</div>
+          <div class="input-val">"&nbsp;&nbsp;&nbsp;hello from mofa ai&nbsp;&nbsp;&nbsp;"</div>
+          <div class="steps-container" id="steps-wf2"></div>
+          <div class="final-output" id="final-wf2">
+            <span class="final-label">FINAL OUTPUT</span>
+            <span class="final-val" id="finalval-wf2"></span>
+          </div>
+        </div>
+
+        <!-- WF3 -->
+        <div class="workflow-card" id="wf3">
+          <div class="workflow-name">Workflow 3 — Reverse then Uppercase</div>
+          <div class="pipeline">
+            <div class="pipe-node">Text Reverser</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-node">Uppercase Bot</div>
+          </div>
+          <div class="input-label">INPUT</div>
+          <div class="input-val">"sarang built this"</div>
+          <div class="steps-container" id="steps-wf3"></div>
+          <div class="final-output" id="final-wf3">
+            <span class="final-label">FINAL OUTPUT</span>
+            <span class="final-val" id="finalval-wf3"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="section" id="summary-section" style="display:none">
+    <div class="section-header">
+      <span class="step-badge" style="background:#22c55e">DONE</span>
+      <span class="section-title">Demo Complete</span>
+      <div class="status-dot ok"></div>
+    </div>
+    <div class="section-body">
+      <div class="summary-grid">
+        <div class="stat-card">
+          <div class="stat-num">4</div>
+          <div class="stat-label">Agents created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">3</div>
+          <div class="stat-label">Workflows run</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">6</div>
+          <div class="stat-label">Steps executed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'https://mofa-ai-backend.onrender.com';
+
+function log(id, msg, cls = '') {
+  const box = document.getElementById('log-' + id);
+  const line = document.createElement('div');
+  if (cls) line.className = 'log-' + cls;
+  line.textContent = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setDot(id, state) {
+  document.getElementById('dot-' + id).className = 'status-dot ' + state;
+}
+
+async function post(path, body, token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const r = await fetch(API + path, { method: 'POST', headers, body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function get(path, token) {
+  const r = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } });
+  return r.json();
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function renderSteps(wfId, steps) {
+  const container = document.getElementById('steps-' + wfId);
+  steps.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'step-row';
+    row.innerHTML = `
+      <div class="step-num">${s.index}</div>
+      <div class="step-content">
+        <div class="step-agent">${s.agentName}</div>
+        <div class="step-output">${s.output}</div>
+      </div>`;
+    container.appendChild(row);
+    setTimeout(() => row.classList.add('visible'), 80 * (i + 1));
+  });
+}
+
+async function runDemo() {
+  const btn = document.getElementById('runBtn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+  btn.disabled = true;
+  btn.classList.add('running');
+  btnText.textContent = 'Running…';
+
+  // clear logs
+  document.getElementById('log-auth').textContent = '';
+
+  try {
+    // ── STEP 1: Auth ──────────────────────────────────────────
+    setDot('auth', 'loading');
+    const ts = Date.now();
+    const email = `demo_${ts}@mofa.test`;
+    log('auth', '→ POST /auth/register', 'info');
+    const reg = await post('/auth/register', { email, password: 'Demo@1234' });
+    log('auth', '✓ ' + reg.message, 'ok');
+
+    log('auth', '→ POST /auth/login', 'info');
+    const loginRes = await post('/auth/login', { email, password: 'Demo@1234' });
+    const token = loginRes.token;
+    log('auth', '✓ JWT received — userId: ' + loginRes.userId, 'ok');
+    setDot('auth', 'ok');
+    await delay(400);
+
+    // ── STEP 2: Agents ────────────────────────────────────────
+    setDot('agents', 'loading');
+
+    const agentDefs = [
+      { key: 'UP', name: 'Uppercase Bot',  type: 'UPPERCASE'  },
+      { key: 'WC', name: 'Word Counter',   type: 'WORD_COUNT' },
+      { key: 'RV', name: 'Text Reverser',  type: 'REVERSE'    },
+      { key: 'TR', name: 'Space Trimmer',  type: 'TRIM'       },
+    ];
+
+    const ids = {};
+    for (const def of agentDefs) {
+      const a = await post('/agents', { name: def.name, type: def.type }, token);
+      ids[def.key] = a.id;
+      document.getElementById('card-' + def.key).classList.add('active');
+      await delay(200);
+    }
+    setDot('agents', 'ok');
+    await delay(400);
+
+    // ── STEP 3: Workflows ─────────────────────────────────────
+    setDot('wf', 'loading');
+
+    const workflows = [
+      { el: 'wf1', name: 'Uppercase then Count', agents: [ids.UP, ids.WC], input: 'the quick brown fox jumps over the lazy dog' },
+      { el: 'wf2', name: 'Trim then Reverse',    agents: [ids.TR, ids.RV], input: '   hello from mofa ai   ' },
+      { el: 'wf3', name: 'Reverse then Uppercase', agents: [ids.RV, ids.UP], input: 'sarang built this' },
+    ];
+
+    for (const wf of workflows) {
+      document.getElementById(wf.el).classList.add('active');
+      const created = await post('/workflows', { name: wf.name, agentIds: wf.agents }, token);
+      await delay(300);
+
+      const result = await post('/workflows/' + created.id + '/run', { input: wf.input }, token);
+      renderSteps(wf.el, result.steps);
+
+      await delay(600);
+      const finalEl = document.getElementById('final-' + wf.el);
+      document.getElementById('finalval-' + wf.el).textContent = result.finalOutput;
+      finalEl.classList.add('visible');
+      await delay(500);
+    }
+
+    setDot('wf', 'ok');
+    document.getElementById('summary-section').style.display = 'block';
+
+  } catch (e) {
+    setDot('auth', 'err');
+    log('auth', '✗ Error: ' + e.message, 'err');
+  }
+
+  btn.disabled = false;
+  btn.classList.remove('running');
+  btnText.textContent = 'Run Again';
+  spinner.style.display = 'none';
+}
+</script>
+</body>
+</html>
