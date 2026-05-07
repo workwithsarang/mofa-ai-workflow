@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mofa-AI — College Presentation</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f1a;
+  --surface: #141728;
+  --border: #1e2440;
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --accent: #38bdf8;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --card: #1a1d30;
+}
+
+html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+
+.deck {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.slide {
+  display: none;
+  width: 960px; height: 540px;
+  background: var(--bg);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--text);
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+}
+.slide.active { display: flex; flex-direction: column; }
+
+/* animated gradient top bar */
+.slide::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+/* slide counter */
+.counter {
+  position: absolute; bottom: 16px; right: 20px;
+  font-size: 0.7rem; color: var(--muted); font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+/* ── LAYOUTS ───────────────────────────── */
+.layout-title {
+  align-items: center; justify-content: center;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.15) 0%, transparent 65%),
+              var(--bg);
+  gap: 0;
+  padding: 48px;
+}
+
+.layout-content {
+  padding: 40px 52px;
+  gap: 20px;
+}
+
+.layout-split {
+  flex-direction: row !important;
+  padding: 0;
+}
+.split-left  { flex: 1; padding: 40px 36px 40px 52px; display: flex; flex-direction: column; justify-content: center; }
+.split-right { flex: 1; background: var(--surface); padding: 40px 52px 40px 36px; display: flex; flex-direction: column; justify-content: center; border-left: 1px solid var(--border); }
+
+/* ── TYPOGRAPHY ────────────────────────── */
+.slide-tag {
+  display: inline-block;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary-light);
+  background: rgba(99,102,241,.12);
+  border: 1px solid rgba(99,102,241,.25);
+  padding: 3px 10px; border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+.slide-title {
+  font-size: 2.2rem; font-weight: 800; line-height: 1.15;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #e2e8f0 30%, var(--primary-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.slide-title-lg {
+  font-size: 3rem; font-weight: 900; line-height: 1.1;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #fff 20%, var(--primary-light) 60%, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.slide-sub {
+  font-size: 1.05rem; color: var(--muted); line-height: 1.55;
+  margin-top: 8px;
+}
+
+.section-title {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted); margin-bottom: 16px;
+}
+
+/* ── COMPONENTS ────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700;
+  background: rgba(99,102,241,.12);
+  border: 1px solid rgba(99,102,241,.25);
+  color: var(--primary-light);
+}
+
+.badge-green  { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: #86efac; }
+.badge-blue   { background: rgba(56,189,248,.12); border-color: rgba(56,189,248,.3); color: #7dd3fc; }
+.badge-amber  { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+.badge-red    { background: rgba(239,68,68,.12);  border-color: rgba(239,68,68,.3);  color: #fca5a5; }
+
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-size: 0.72rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.pipe-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.pipe-box {
+  background: rgba(99,102,241,.1);
+  border: 1px solid rgba(99,102,241,.3);
+  border-radius: 7px; padding: 6px 14px;
+  font-size: 0.8rem; font-weight: 600; color: var(--primary-light);
+}
+.pipe-arrow { color: var(--muted); font-size: 1rem; }
+
+.code-block {
+  background: #0a0c16;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.65;
+  overflow: hidden;
+}
+.code-block .kw { color: #818cf8; }
+.code-block .str{ color: #86efac; }
+.code-block .cm { color: #475569; }
+.code-block .fn { color: #38bdf8; }
+.code-block .hl { color: #fcd34d; }
+
+.list-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 0.88rem; color: #94a3b8; line-height: 1.5;
+  padding: 6px 0;
+}
+.list-item .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--primary); margin-top: 7px; flex-shrink: 0;
+}
+
+.tech-badge {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+}
+.tech-icon { font-size: 1.5rem; }
+.tech-name { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.tech-role { font-size: 0.7rem; color: var(--muted); }
+
+.stat-big { font-size: 2.4rem; font-weight: 900; color: var(--primary); line-height: 1; }
+.stat-lbl { font-size: 0.72rem; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+/* ── NAV ───────────────────────────────── */
+.nav-hint {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  font-size: 0.72rem; color: #2d3148; letter-spacing: 0.06em;
+  pointer-events: none;
+}
+.progress-bar {
+  position: fixed; bottom: 0; left: 0;
+  height: 2px; background: var(--primary);
+  transition: width .3s ease;
+}
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ── SLIDE 1 · Title ─────────────────────── -->
+  <div class="slide layout-title active" data-slide="1">
+    <span class="slide-tag">Open Source Assignment · Mofa-AI</span>
+    <h1 class="slide-title-lg">Agent + Workflow<br>Management System</h1>
+    <p class="slide-sub" style="margin-top:16px;font-size:0.95rem;">
+      Build text-processing agents. Chain them into workflows. Run step-by-step.
+    </p>
+    <div style="display:flex;gap:10px;margin-top:28px;justify-content:center;flex-wrap:wrap;">
+      <span class="pill">Node.js + Express</span>
+      <span class="pill">React 18</span>
+      <span class="pill">PostgreSQL + Prisma</span>
+      <span class="pill">JWT Auth</span>
+      <span class="pill">REST API</span>
+    </div>
+    <div style="margin-top:32px;font-size:0.8rem;color:var(--muted);">
+      Sarang Bodhe &nbsp;·&nbsp; Mofa-AI Open Source &nbsp;·&nbsp; 2026
+    </div>
+    <div class="counter">1 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 2 · Problem Statement ───────── -->
+  <div class="slide layout-split" data-slide="2">
+    <div class="split-left">
+      <span class="slide-tag">The Problem</span>
+      <h2 class="slide-title">Why does this<br>project exist?</h2>
+      <p class="slide-sub" style="margin-top:12px;font-size:0.88rem;">
+        Modern AI systems need reusable, composable text-processing units that can be wired together without writing new code every time.
+      </p>
+    </div>
+    <div class="split-right">
+      <div class="section-title">Pain Points</div>
+      <div class="list-item"><div class="dot"></div><span>Hard-coded pipelines — change one step and everything breaks</span></div>
+      <div class="list-item"><div class="dot"></div><span>No visibility into what each step produced</span></div>
+      <div class="list-item"><div class="dot"></div><span>No user isolation — everyone shares the same agents</span></div>
+      <div class="list-item"><div class="dot"></div><span>No API — no way to integrate with other systems</span></div>
+      <div style="margin-top:20px" class="section-title">Our Solution</div>
+      <div class="list-item"><div class="dot" style="background:var(--green)"></div><span>Named agents with explicit types and JWT-isolated ownership</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--green)"></div><span>Workflows that chain exactly 2 agents and log every step</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--green)"></div><span>Full REST API + Swagger UI for integration</span></div>
+    </div>
+    <div class="counter">2 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 3 · What I Built ────────────── -->
+  <div class="slide layout-content" data-slide="3">
+    <span class="slide-tag">Overview</span>
+    <h2 class="slide-title">What I Built</h2>
+    <div class="grid-3" style="margin-top:4px">
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">🔐</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">JWT Authentication</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Register, login, token-based sessions. Every agent and workflow is private to its owner.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">🤖</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">Agent CRUD</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Create, edit, delete, toggle active/inactive agents. 4 processing types built-in.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">🔗</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">Workflow Builder</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Chain two agents. Run with any input. See step-by-step output from each agent.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">📖</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">Swagger API Docs</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Every endpoint documented and testable at /api-docs. No Postman needed.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">🎨</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">React Frontend</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Dashboard, agent cards, visual pipeline builder, animated execution runner.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.6rem;margin-bottom:8px">☁️</div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">Cloud Deployed</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">Backend on Render, frontend on Vercel. PostgreSQL database included.</div>
+      </div>
+    </div>
+    <div class="counter">3 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 4 · Tech Stack ──────────────── -->
+  <div class="slide layout-content" data-slide="4">
+    <span class="slide-tag">Technology</span>
+    <h2 class="slide-title">Tech Stack</h2>
+    <div class="grid-4" style="margin-top:4px">
+      <div class="tech-badge"><span class="tech-icon">🟢</span><div><div class="tech-name">Node.js</div><div class="tech-role">Runtime</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">⚡</span><div><div class="tech-name">Express</div><div class="tech-role">REST API framework</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🔷</span><div><div class="tech-name">Prisma</div><div class="tech-role">ORM + migrations</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🐘</span><div><div class="tech-name">PostgreSQL</div><div class="tech-role">Database</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">⚛️</span><div><div class="tech-name">React 18</div><div class="tech-role">UI library</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">⚡</span><div><div class="tech-name">Vite</div><div class="tech-role">Build tool</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🔗</span><div><div class="tech-name">React Router</div><div class="tech-role">Client routing</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">📡</span><div><div class="tech-name">Axios</div><div class="tech-role">HTTP client</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🔐</span><div><div class="tech-name">JWT</div><div class="tech-role">Authentication</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🔒</span><div><div class="tech-name">bcryptjs</div><div class="tech-role">Password hashing</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">📄</span><div><div class="tech-name">Swagger UI</div><div class="tech-role">API documentation</div></div></div>
+      <div class="tech-badge"><span class="tech-icon">🚀</span><div><div class="tech-name">Render + Vercel</div><div class="tech-role">Deployment</div></div></div>
+    </div>
+    <div class="counter">4 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 5 · Architecture ────────────── -->
+  <div class="slide layout-content" data-slide="5">
+    <span class="slide-tag">Architecture</span>
+    <h2 class="slide-title">How It's Structured</h2>
+    <div class="grid-2" style="margin-top:4px">
+      <div>
+        <div class="section-title" style="margin-bottom:10px">Backend — MVC Pattern</div>
+        <div class="code-block">
+<span class="cm">backend/src/</span>
+├── <span class="fn">routes/</span>       <span class="cm"># auth, agents, workflows</span>
+├── <span class="fn">controllers/</span>  <span class="cm"># business logic</span>
+├── <span class="fn">middleware/</span>   <span class="cm"># JWT auth guard</span>
+├── <span class="fn">helpers/</span>      <span class="cm"># runAgent.js</span>
+└── <span class="fn">swagger/</span>      <span class="cm"># API docs config</span>
+
+<span class="cm">backend/prisma/</span>
+├── <span class="kw">schema.prisma</span>  <span class="cm"># User, Agent, Workflow</span>
+└── <span class="fn">migrations/</span>   <span class="cm"># version-controlled SQL</span>
+        </div>
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:10px">Frontend — Page-based React</div>
+        <div class="code-block">
+<span class="cm">frontend/src/</span>
+├── <span class="fn">pages/</span>
+│   ├── <span class="kw">Dashboard.jsx</span>
+│   ├── <span class="kw">AgentsList.jsx</span>
+│   ├── <span class="kw">AgentForm.jsx</span>
+│   ├── <span class="kw">WorkflowsList.jsx</span>
+│   ├── <span class="kw">WorkflowBuilder.jsx</span>
+│   └── <span class="kw">WorkflowRun.jsx</span>
+├── <span class="fn">components/</span>  <span class="cm"># Navbar, ProtectedRoute</span>
+└── <span class="fn">services/</span>    <span class="cm"># api.js (Axios + JWT)</span>
+        </div>
+      </div>
+    </div>
+    <div class="pipe-row" style="margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
+      <div class="pipe-box">Browser</div><div class="pipe-arrow">→</div>
+      <div class="pipe-box">React (Vercel)</div><div class="pipe-arrow">→</div>
+      <div class="pipe-box">Express API (Render)</div><div class="pipe-arrow">→</div>
+      <div class="pipe-box">Prisma ORM</div><div class="pipe-arrow">→</div>
+      <div class="pipe-box">PostgreSQL DB</div>
+    </div>
+    <div class="counter">5 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 6 · Agent Types ─────────────── -->
+  <div class="slide layout-content" data-slide="6">
+    <span class="slide-tag">Agents</span>
+    <h2 class="slide-title">The 4 Agent Types</h2>
+    <div class="grid-2" style="margin-top:6px;gap:14px;">
+      <div class="card" style="border-left:3px solid var(--primary)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:1.4rem">🔠</span>
+          <span style="font-family:monospace;font-weight:700;color:var(--primary-light);font-size:0.9rem">UPPERCASE</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Converts every character to uppercase.</div>
+        <div style="font-size:0.75rem;">
+          <span style="color:var(--muted)">Input: </span><span style="font-family:monospace;color:var(--text)">"hello world"</span>
+          <span style="color:var(--muted)"> → </span>
+          <span style="font-family:monospace;color:#86efac">"HELLO WORLD"</span>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:1.4rem">🔢</span>
+          <span style="font-family:monospace;font-weight:700;color:#7dd3fc;font-size:0.9rem">WORD_COUNT</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Counts the number of words in the text.</div>
+        <div style="font-size:0.75rem;">
+          <span style="color:var(--muted)">Input: </span><span style="font-family:monospace;color:var(--text)">"hello world"</span>
+          <span style="color:var(--muted)"> → </span>
+          <span style="font-family:monospace;color:#86efac">"2"</span>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--amber)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:1.4rem">🔄</span>
+          <span style="font-family:monospace;font-weight:700;color:#fcd34d;font-size:0.9rem">REVERSE</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Reverses every single character in the string.</div>
+        <div style="font-size:0.75rem;">
+          <span style="color:var(--muted)">Input: </span><span style="font-family:monospace;color:var(--text)">"hello"</span>
+          <span style="color:var(--muted)"> → </span>
+          <span style="font-family:monospace;color:#86efac">"olleh"</span>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--green)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:1.4rem">✂️</span>
+          <span style="font-family:monospace;font-weight:700;color:#86efac;font-size:0.9rem">TRIM</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Removes leading and trailing whitespace.</div>
+        <div style="font-size:0.75rem;">
+          <span style="color:var(--muted)">Input: </span><span style="font-family:monospace;color:var(--text)">"  hello  "</span>
+          <span style="color:var(--muted)"> → </span>
+          <span style="font-family:monospace;color:#86efac">"hello"</span>
+        </div>
+      </div>
+    </div>
+    <div class="counter">6 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 7 · Workflow Concept ────────── -->
+  <div class="slide layout-content" data-slide="7">
+    <span class="slide-tag">Workflows</span>
+    <h2 class="slide-title">How Workflows Work</h2>
+    <p class="slide-sub" style="font-size:0.85rem;margin-top:4px;">A workflow chains exactly 2 agents. Output of Agent A becomes the input of Agent B.</p>
+
+    <div style="margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;">
+      <div style="font-size:0.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Example: "Uppercase then Count"</div>
+      <div class="pipe-row">
+        <div style="text-align:center">
+          <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">INPUT</div>
+          <div style="background:#0d0f1a;border:1px dashed var(--border);border-radius:6px;padding:8px 14px;font-family:monospace;font-size:0.82rem;color:#94a3b8">"the quick brown fox"</div>
+        </div>
+        <div class="pipe-arrow" style="font-size:1.4rem">→</div>
+        <div style="text-align:center">
+          <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">STEP 1</div>
+          <div class="pipe-box" style="font-size:0.82rem;padding:8px 14px">Uppercase Bot<br><span style="font-size:0.65rem;color:var(--muted)">UPPERCASE</span></div>
+        </div>
+        <div class="pipe-arrow" style="font-size:1.4rem">→</div>
+        <div style="text-align:center">
+          <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">STEP 2</div>
+          <div class="pipe-box" style="font-size:0.82rem;padding:8px 14px">Word Counter<br><span style="font-size:0.65rem;color:var(--muted)">WORD_COUNT</span></div>
+        </div>
+        <div class="pipe-arrow" style="font-size:1.4rem">→</div>
+        <div style="text-align:center">
+          <div style="font-size:0.65rem;color:var(--muted);margin-bottom:4px">OUTPUT</div>
+          <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:6px;padding:8px 14px;font-family:monospace;font-size:1.1rem;font-weight:700;color:#86efac">"4"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:14px">
+      <div class="card" style="padding:12px 16px">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px">Step 1 output</div>
+        <div style="font-family:monospace;font-size:0.85rem;color:var(--primary-light)">"THE QUICK BROWN FOX"</div>
+      </div>
+      <div class="card" style="padding:12px 16px">
+        <div style="font-size:0.72rem;color:var(--green);font-weight:700;text-transform:uppercase;margin-bottom:6px">Final output</div>
+        <div style="font-family:monospace;font-size:0.85rem;color:#86efac">"4" &nbsp;(4 words counted)</div>
+      </div>
+    </div>
+    <div class="counter">7 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 8 · Database Design ─────────── -->
+  <div class="slide layout-split" data-slide="8">
+    <div class="split-left">
+      <span class="slide-tag">Data Model</span>
+      <h2 class="slide-title">Database<br>Design</h2>
+      <p class="slide-sub" style="font-size:0.85rem;margin-top:10px">Three models in PostgreSQL. Managed by Prisma ORM with version-controlled migrations.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <span class="pill">User</span>
+        <span class="pill">Agent</span>
+        <span class="pill">Workflow</span>
+      </div>
+    </div>
+    <div class="split-right">
+      <div class="code-block" style="font-size:0.72rem">
+<span class="kw">model</span> <span class="fn">User</span> {
+  id        String   <span class="str">@id @default(cuid())</span>
+  email     String   <span class="str">@unique</span>
+  password  String
+  agents    Agent[]
+  workflows Workflow[]
+}
+
+<span class="kw">model</span> <span class="fn">Agent</span> {
+  id     String      <span class="str">@id @default(cuid())</span>
+  name   String
+  type   <span class="hl">AgentType</span>   <span class="cm">// UPPERCASE | WORD_COUNT</span>
+  status <span class="hl">AgentStatus</span> <span class="cm">// ACTIVE | INACTIVE</span>
+  userId String
+  user   User        <span class="str">@relation(...)</span>
+}
+
+<span class="kw">model</span> <span class="fn">Workflow</span> {
+  id       String   <span class="str">@id @default(cuid())</span>
+  name     String
+  agentIds String[] <span class="cm">// [agentAId, agentBId]</span>
+  userId   String
+}
+      </div>
+    </div>
+    <div class="counter">8 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 9 · API Design ──────────────── -->
+  <div class="slide layout-content" data-slide="9">
+    <span class="slide-tag">REST API</span>
+    <h2 class="slide-title">API Endpoints</h2>
+    <div style="margin-top:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead>
+          <tr style="background:#0d0f1a">
+            <th style="padding:9px 14px;text-align:left;color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Method</th>
+            <th style="padding:9px 14px;text-align:left;color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Endpoint</th>
+            <th style="padding:9px 14px;text-align:left;color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Auth</th>
+            <th style="padding:9px 14px;text-align:left;color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-blue" style="font-size:0.65rem">POST</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/auth/register</td><td style="padding:8px 14px;color:var(--muted)">No</td><td style="padding:8px 14px;color:#94a3b8">Create account</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-blue" style="font-size:0.65rem">POST</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/auth/login</td><td style="padding:8px 14px;color:var(--muted)">No</td><td style="padding:8px 14px;color:#94a3b8">Login, receive JWT</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-green" style="font-size:0.65rem">GET</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/agents</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">List my agents</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-blue" style="font-size:0.65rem">POST</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/agents</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">Create new agent</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-amber" style="font-size:0.65rem">PUT</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/agents/:id</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">Update agent</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-red" style="font-size:0.65rem">DELETE</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/agents/:id</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">Delete agent</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-blue" style="font-size:0.65rem">POST</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/workflows</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">Create workflow</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td style="padding:8px 14px"><span class="pill badge-blue" style="font-size:0.65rem">POST</span></td><td style="padding:8px 14px;font-family:monospace;color:#94a3b8">/workflows/:id/run</td><td style="padding:8px 14px;color:#86efac">JWT</td><td style="padding:8px 14px;color:#94a3b8">Execute workflow</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="counter">9 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 10 · How a User Uses It ─────── -->
+  <div class="slide layout-content" data-slide="10">
+    <span class="slide-tag">User Flow</span>
+    <h2 class="slide-title">How to Use It</h2>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px">
+        <div class="step-num">1</div>
+        <div>
+          <div style="font-weight:700;font-size:0.88rem">Register &amp; Log In</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">Create an account at the frontend URL. Your JWT token is stored in the browser.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px">
+        <div class="step-num">2</div>
+        <div>
+          <div style="font-weight:700;font-size:0.88rem">Create Agents</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">Go to Agents → New Agent. Pick a name and type (UPPERCASE, WORD_COUNT, REVERSE, or TRIM).</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px">
+        <div class="step-num">3</div>
+        <div>
+          <div style="font-weight:700;font-size:0.88rem">Build a Workflow</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">Go to Workflows → New Workflow. Name it and pick Agent A + Agent B in order.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px">
+        <div class="step-num">4</div>
+        <div>
+          <div style="font-weight:700;font-size:0.88rem">Run the Workflow</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">Click Run, type any input string, hit Execute. See each step's output and the final result.</div>
+        </div>
+      </div>
+    </div>
+    <div class="counter">10 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 11 · Deployment ─────────────── -->
+  <div class="slide layout-split" data-slide="11">
+    <div class="split-left">
+      <span class="slide-tag">Deployment</span>
+      <h2 class="slide-title">Deployed &amp;<br>Live on Cloud</h2>
+      <p class="slide-sub" style="font-size:0.85rem;margin-top:10px">
+        Full-stack cloud deployment with a real PostgreSQL database — not just localhost.
+      </p>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px 14px;font-size:0.78rem;">
+          <span style="color:var(--primary-light);font-weight:700">Frontend</span> — Vercel<br>
+          <span style="color:var(--muted);font-family:monospace;font-size:0.72rem">frontend-nine-bay-65.vercel.app</span>
+        </div>
+        <div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:10px 14px;font-size:0.78rem;">
+          <span style="color:#7dd3fc;font-weight:700">Backend API</span> — Render<br>
+          <span style="color:var(--muted);font-family:monospace;font-size:0.72rem">mofa-ai-backend.onrender.com</span>
+        </div>
+        <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:0.78rem;">
+          <span style="color:#86efac;font-weight:700">Swagger Docs</span><br>
+          <span style="color:var(--muted);font-family:monospace;font-size:0.72rem">mofa-ai-backend.onrender.com/api-docs</span>
+        </div>
+      </div>
+    </div>
+    <div class="split-right">
+      <div class="section-title">Deployment Stack</div>
+      <div class="list-item"><div class="dot" style="background:var(--accent)"></div><span><strong style="color:var(--text)">Vercel</strong> — auto-deploys frontend from GitHub on every push</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--accent)"></div><span><strong style="color:var(--text)">Render</strong> — hosts Node.js backend, runs Prisma migrations on build</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--accent)"></div><span><strong style="color:var(--text)">Render PostgreSQL</strong> — managed database, auto-provisioned via render.yaml</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--accent)"></div><span><strong style="color:var(--text)">render.yaml</strong> — one-click Blueprint: database + backend linked automatically</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--accent)"></div><span><strong style="color:var(--text)">GitHub</strong> — public repo at github.com/workwithsarang/mofa-ai-workflow</span></div>
+    </div>
+    <div class="counter">11 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 12 · Challenges ─────────────── -->
+  <div class="slide layout-content" data-slide="12">
+    <span class="slide-tag">Engineering</span>
+    <h2 class="slide-title">Challenges I Solved</h2>
+    <div class="grid-2" style="margin-top:8px;gap:12px">
+      <div class="card">
+        <div style="font-size:0.72rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Problem</div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:4px">Prisma migrations missing in git</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:10px">Render ran <code style="color:#94a3b8">prisma migrate deploy</code> but migrations folder was never committed → deployment failed</div>
+        <div style="font-size:0.72rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Solution</div>
+        <div style="font-size:0.75rem;color:#86efac">Committed <code>backend/prisma/migrations/</code> to git. Always commit migration files.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.72rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Problem</div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:4px">Vercel team-level SSO blocked API</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:10px">All *.vercel.app URLs under the team were behind Vercel Authentication — bypass tokens didn't help.</div>
+        <div style="font-size:0.72rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Solution</div>
+        <div style="font-size:0.75rem;color:#86efac">Moved backend to Render entirely. Render gives a public URL with no SSO layer.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.72rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Problem</div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:4px">Frontend calling localhost in production</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:10px">VITE_API_BASE_URL env var was not set in Vercel — build fell back to http://localhost:5000</div>
+        <div style="font-size:0.72rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Solution</div>
+        <div style="font-size:0.75rem;color:#86efac">Set VITE_API_BASE_URL in Vercel project settings and redeployed.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.72rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Problem</div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:4px">GitHub push rejected — email privacy</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:10px">GitHub blocked the push because the commit author email was set to a real private email address.</div>
+        <div style="font-size:0.72rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Solution</div>
+        <div style="font-size:0.75rem;color:#86efac">Used GitHub's noreply email alias and amended the commit before pushing.</div>
+      </div>
+    </div>
+    <div class="counter">12 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 13 · Key Learnings ──────────── -->
+  <div class="slide layout-split" data-slide="13">
+    <div class="split-left">
+      <span class="slide-tag">Takeaways</span>
+      <h2 class="slide-title">What I<br>Learned</h2>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="stat-big" style="font-size:1.6rem">11</div>
+          <div class="stat-lbl">API endpoints<br>built from scratch</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="stat-big" style="font-size:1.6rem;color:var(--accent)">3</div>
+          <div class="stat-lbl">deployment<br>platforms used</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="stat-big" style="font-size:1.6rem;color:var(--green)">100%</div>
+          <div class="stat-lbl">end-to-end<br>test pass rate</div>
+        </div>
+      </div>
+    </div>
+    <div class="split-right">
+      <div class="section-title">Skills Gained</div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">Full-stack architecture</strong> — designing an API that a frontend actually consumes</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">JWT auth flow</strong> — stateless tokens, middleware guards, 401 vs 403</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">Prisma ORM + migrations</strong> — schema-first DB design, version control of SQL</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">Cloud deployment</strong> — Render Blueprints, Vercel env vars, cold starts</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">React patterns</strong> — protected routes, axios interceptors, controlled forms</span></div>
+      <div class="list-item"><div class="dot" style="background:var(--primary)"></div><span><strong style="color:var(--text)">Debugging production</strong> — reading logs, tracing failures across services</span></div>
+    </div>
+    <div class="counter">13 / 14</div>
+  </div>
+
+  <!-- ── SLIDE 14 · Thank You ───────────────── -->
+  <div class="slide layout-title" data-slide="14"
+    style="background:radial-gradient(ellipse at 50% 100%, rgba(99,102,241,.2) 0%, transparent 60%), var(--bg)">
+    <span class="slide-tag">Thank You</span>
+    <h1 class="slide-title-lg" style="font-size:2.6rem">Questions?</h1>
+    <p class="slide-sub" style="max-width:520px;margin:12px auto 0;font-size:0.9rem">
+      The entire project is live and open-source. Feel free to test it, clone it, or ask anything about how it was built.
+    </p>
+    <div style="margin-top:28px;display:flex;flex-direction:column;gap:10px;align-items:center">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:0.75rem;color:var(--muted)">
+          🌐 <span style="font-family:monospace;color:#94a3b8">frontend-nine-bay-65.vercel.app</span>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:0.75rem;color:var(--muted)">
+          🔧 <span style="font-family:monospace;color:#94a3b8">mofa-ai-backend.onrender.com</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:0.75rem;color:var(--muted)">
+          📄 <span style="font-family:monospace;color:#94a3b8">mofa-ai-backend.onrender.com/api-docs</span>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:0.75rem;color:var(--muted)">
+          💻 <span style="font-family:monospace;color:#94a3b8">github.com/workwithsarang/mofa-ai-workflow</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px;font-size:0.82rem;color:var(--muted)">
+      Built by <strong style="color:var(--text)">Sarang Bodhe</strong> &nbsp;·&nbsp; Mofa-AI Open Source Assignment &nbsp;·&nbsp; 2026
+    </div>
+    <div class="counter">14 / 14</div>
+  </div>
+
+</div><!-- /deck -->
+
+<div class="nav-hint" id="hint">← → arrow keys to navigate &nbsp;·&nbsp; F for fullscreen</div>
+<div class="progress-bar" id="progress"></div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total  = slides.length;
+let current  = 0;
+
+function go(n) {
+  slides[current].classList.remove('active');
+  current = (n + total) % total;
+  slides[current].classList.add('active');
+  document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') go(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  go(current - 1);
+  if (e.key === 'f' || e.key === 'F') {
+    document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  }
+  if (e.key >= '1' && e.key <= '9') go(parseInt(e.key) - 1);
+});
+
+// touch swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 40) go(dx < 0 ? current + 1 : current - 1);
+});
+
+// hide hint after 4s
+setTimeout(() => { document.getElementById('hint').style.opacity = 0; }, 4000);
+
+// init progress
+document.getElementById('progress').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>
