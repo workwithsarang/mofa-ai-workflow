@@ -79,4 +79,13 @@ async function runWorkflow(req, res) {
   });
 }
 
-module.exports = { listWorkflows, createWorkflow, getWorkflow, runWorkflow };
+async function deleteWorkflow(req, res) {
+  const workflow = await prisma.workflow.findFirst({
+    where: { id: req.params.id, userId: req.userId },
+  });
+  if (!workflow) return res.status(404).json({ error: 'Workflow not found' });
+  await prisma.workflow.delete({ where: { id: req.params.id } });
+  return res.json({ message: 'Workflow deleted' });
+}
+
+module.exports = { listWorkflows, createWorkflow, getWorkflow, runWorkflow, deleteWorkflow };

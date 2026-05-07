@@ -16,34 +16,42 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
-      navigate('/agents');
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '3rem auto' }}>
-      <div className="card">
-        <h2>Sign in</h2>
+    <div className="auth-wrap">
+      <div className="auth-box">
+        <h2>Welcome back</h2>
+        <p className="sub">Sign in to your Mofa-AI account</p>
+
         {error && <div className="alert alert-error">{error}</div>}
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" required />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required />
           </div>
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
-            {loading ? 'Signing in…' : 'Login'}
+          <button className="btn btn-primary" type="submit" disabled={loading}
+            style={{ width: '100%', justifyContent: 'center', padding: '0.65rem' }}>
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
-          No account? <Link to="/register">Register</Link>
+
+        <hr className="divider" />
+        <p className="text-muted" style={{ textAlign: 'center' }}>
+          No account? <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>

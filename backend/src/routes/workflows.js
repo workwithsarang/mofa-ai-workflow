@@ -6,6 +6,7 @@ const {
   createWorkflow,
   getWorkflow,
   runWorkflow,
+  deleteWorkflow,
 } = require('../controllers/workflowController');
 
 router.use(authMiddleware);
@@ -134,5 +135,27 @@ router.get('/:id', getWorkflow);
  *         description: Workflow or agent not found
  */
 router.post('/:id/run', runWorkflow);
+
+/**
+ * @swagger
+ * /workflows/{id}:
+ *   delete:
+ *     summary: Delete a workflow
+ *     tags: [Workflows]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Workflow deleted
+ *       404:
+ *         description: Workflow not found
+ */
+router.delete('/:id', deleteWorkflow);
 
 module.exports = router;

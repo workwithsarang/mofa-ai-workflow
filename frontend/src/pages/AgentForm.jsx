@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 
-const TYPES = ['UPPERCASE', 'WORD_COUNT', 'REVERSE', 'TRIM'];
+const TYPES = [
+  { value: 'UPPERCASE',  icon: '🔠', desc: 'Converts text to ALL CAPS' },
+  { value: 'WORD_COUNT', icon: '🔢', desc: 'Counts the number of words' },
+  { value: 'REVERSE',    icon: '🔄', desc: 'Reverses every character' },
+  { value: 'TRIM',       icon: '✂️',  desc: 'Strips leading/trailing spaces' },
+];
 
 export default function AgentForm() {
   const { id } = useParams();
@@ -12,8 +17,6 @@ export default function AgentForm() {
   const [name, setName] = useState('');
   const [type, setType] = useState('UPPERCASE');
   const [status, setStatus] = useState('ACTIVE');
-  const [inputSchema, setInputSchema] = useState('');
-  const [processingLogic, setProcessingLogic] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,8 +27,6 @@ export default function AgentForm() {
           setName(res.data.name);
           setType(res.data.type);
           setStatus(res.data.status);
-          setInputSchema(res.data.inputSchema || '');
-          setProcessingLogic(res.data.processingLogic || '');
         })
         .catch(() => setError('Failed to load agent'));
     }
@@ -35,12 +36,11 @@ export default function AgentForm() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const payload = { name, type, status, inputSchema: inputSchema || null, processingLogic: processingLogic || null };
     try {
       if (isEdit) {
-        await api.put(`/agents/${id}`, payload);
+        await api.put(`/agents/${id}`, { name, type, status });
       } else {
-        await api.post('/agents', payload);
+        await api.post('/agents', { name, type, status });
       }
       navigate('/agents');
     } catch (err) {
@@ -50,43 +50,64 @@ export default function AgentForm() {
     }
   }
 
+  const selectedType = TYPES.find(t => t.value === type);
+
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+    <div className="page-wrap">
       <div className="page-header">
         <h2>{isEdit ? 'Edit Agent' : 'New Agent'}</h2>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ maxWidth: 560 }}>
         {error && <div className="alert alert-error">{error}</div>}
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} required />
+            <label>Agent Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)}
+              placeholder="e.g. My Uppercase Bot" required />
           </div>
+
           <div className="form-group">
             <label>Type *</label>
             <select value={type} onChange={e => setType(e.target.value)}>
-              {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.icon} {t.value} — {t.desc}</option>
+              ))}
             </select>
+            {selectedType && (
+              <div className="alert alert-info" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
+                <strong>{selectedType.icon} {selectedType.value}</strong> — {selectedType.desc}
+              </div>
+            )}
           </div>
+
           <div className="form-group">
             <label>Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)}>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-            </select>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              {['ACTIVE', 'INACTIVE'].map(s => (
+                <label key={s} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '0.5rem 1rem',
+                  border: `1px solid ${status === s ? '#6366f1' : '#2d3148'}`,
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  background: status === s ? 'rgba(99,102,241,.12)' : '#0f1117',
+                  flex: 1,
+                }}>
+                  <input type="radio" name="status" value={s}
+                    checked={status === s}
+                    onChange={() => setStatus(s)}
+                    style={{ accentColor: '#6366f1' }} />
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: status === s ? '#a5b4fc' : '#64748b' }}>
+                    {s}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="form-group">
-            <label>Input Schema (optional)</label>
-            <textarea value={inputSchema} onChange={e => setInputSchema(e.target.value)}
-              placeholder="Describe expected input format…" />
-          </div>
-          <div className="form-group">
-            <label>Processing Logic (optional notes)</label>
-            <textarea value={processingLogic} onChange={e => setProcessingLogic(e.target.value)}
-              placeholder="Notes about processing logic…" />
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button className="btn btn-primary" type="submit" disabled={loading}>
               {loading ? 'Saving…' : isEdit ? 'Update Agent' : 'Create Agent'}
             </button>
